@@ -1,0 +1,22 @@
+# Environnement de reference du projet Walmart Sales Prediction.
+# Versions figees : le notebook utilise des API qui n'existent pas dans les
+# versions anterieures de scikit-learn.
+#
+#   OneHotEncoder(sparse_output=...)   -> scikit-learn >= 1.2
+#   root_mean_squared_error            -> scikit-learn >= 1.4
+#
+# Installation :  pip install -r requirements.txt
+
+pandas==2.3.1
+numpy==2.3.1
+matplotlib==3.10.6
+seaborn==0.13.2
+scikit-learn==1.7.2
+joblib==1.5.2
+
+# Execution du notebook
+jupyterlab==4.4.7
+ipykernel==7.0.1
+
+# Optionnel : diffs git lisibles pour les .ipynb (voir .gitattributes)
+# nbdime==4.0.2

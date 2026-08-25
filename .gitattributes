@@ -1,0 +1,17 @@
+# [N2] Le notebook conserve volontairement ses sorties et ses figures : c'est le
+# livrable evalue, un correcteur qui clone doit voir les resultats sans re-executer.
+# La contrepartie est un diff git bruyant. On la traite par un driver de diff
+# dedie plutot qu'en supprimant les sorties (nbstripout).
+#
+# Activation locale (une fois) :
+#     pip install nbdime && nbdime config-git --enable --global
+#
+# Sans nbdime installe, ces attributs sont ignores sans erreur.
+*.ipynb diff=jupyternotebook
+*.ipynb merge=jupyternotebook
+
+# Normalisation des fins de ligne
+* text=auto
+*.csv text eol=lf
+*.md text eol=lf
+*.py text eol=lf

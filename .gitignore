@@ -1,1 +1,7 @@
 Contexte_projet.txt
+
+# Docs de travail locales (non versionnees)
+docs/
+
+# Artefact regenere a chaque execution du notebook (evite les diffs binaires)
+models/
