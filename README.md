@@ -19,32 +19,27 @@ Le projet suit les trois parties demandées : **EDA et preprocessing**, **régre
 
 | | |
 |---|---|
-| **Modèle retenu** | `Ridge(alpha=0.01)` dans un `Pipeline` complet |
-| **Performance** | **R² = 0.873 ± 0.162** (validation croisée, 50 folds) |
-| **RMSE** | 218 155 $ |
-| **Hold-out** (24 lignes, indicatif) | R² = 0.792, IC 95 % **[0.34 ; 0.96]** · RMSE = 269 238 $ |
+| **Modèle retenu** | `Ridge(alpha=0.001)` dans un `Pipeline` complet |
+| **Performance** | **R² = 0.865 ± 0.268** (validation croisée, 50 folds) |
+| **RMSE** | 208 851 $ |
+| **Hold-out** (24 lignes, indicatif) | R² = 0.755, IC 95 % **[0.09 ; 0.98]** · RMSE = 292 296 $ |
 
 > ⚠️ **Le chiffre à retenir est le R² de validation croisée, pas celui du hold-out.**
-> Avec un dataset de cette taille, un score mesuré sur un seul découpage n'est pas une mesure de performance. Le bootstrap le rend visible : l'intervalle de confiance à 95 % du R² sur le hold-out s'étend de **0.34 à 0.96**, soit une largeur de 0.62 point. C'est pourquoi tous les scores sont reportés en **moyenne ± écart-type** sur 50 folds.
+> Avec un dataset de cette taille, un score mesuré sur un seul découpage n'est pas une mesure de performance. Le bootstrap le rend visible : l'intervalle de confiance à 95 % du R² sur le hold-out s'étend de **0.09 à 0.98**, soit une largeur de 0.89 point. C'est pourquoi tous les scores sont reportés en **moyenne ± écart-type** sur 50 folds.
 
 ### Comparaison des modèles
 
 | Modèle | R² CV | Écart-type | Pire fold | RMSE CV |
 |---|---|---|---|---|
-| **Ridge GridSearch (α=0.01)** | **0.873** | 0.162 | -0.157 | 218 155 $ |
-| Lasso GridSearch (α=100) | 0.865 | 0.185 | -0.229 | 220 638 $ |
-| Ridge (α=1) | 0.814 | **0.087** | **0.516** | 280 143 $ |
-| Lasso (α=1) | 0.762 | 0.488 | -1.796 | 261 464 $ |
-| Linear Regression | 0.761 | 0.621 | -3.119 | 252 411 $ |
+| **Ridge GridSearch (α=0.001)** | **0.865** | 0.268 | -0.781 | 208 851 $ |
+| Lasso GridSearch (α=10) | 0.856 | 0.305 | -1.109 | 213 191 $ |
+| Linear Regression | 0.845 | 0.345 | -1.227 | 215 829 $ |
+| Ridge (α=1) | 0.841 | **0.079** | **+0.542** | 258 695 $ |
+| Lasso (α=1) | 0.837 | 0.361 | -1.391 | 221 639 $ |
 
-Deux lectures possibles de ce tableau, et le notebook les expose toutes les deux :
+`Ridge(α=1)` attire l'œil : son écart-type est trois fois plus faible et il ne descend jamais sous +0.54. Le notebook tranche par un **test apparié** sur les 50 mêmes folds : le modèle retenu gagne **46 fois sur 50** (gain médian +0.059, Wilcoxon p = 4.6e-07), et son **10ᵉ centile est meilleur** (0.882 contre 0.748). Son écart-type plus élevé tient à un petit nombre de folds, pas à une instabilité générale — ici, l'écart-type est un résumé trompeur.
 
-- **Ridge α=0.01** a la meilleure performance moyenne, mais plonge à R² = -0.157 sur son pire fold ;
-- **Ridge α=1** est moins performant en moyenne, mais **deux fois plus régulier** (σ = 0.087) et ne descend jamais sous 0.516.
-
-`GridSearchCV` optimise la RMSE moyenne et ne voit pas cette différence de robustesse. Selon que l'on privilégie la performance moyenne ou la garantie de ne jamais produire une prévision aberrante, le choix n'est pas le même — c'est un arbitrage métier.
-
-La **régression linéaire non régularisée est inutilisable** : R² d'entraînement 0.971 contre 0.761 en validation, et un pire fold à -3.12, c'est-à-dire moins bon que prédire simplement la moyenne des ventes. La régularisation n'est pas un raffinement ici, elle est nécessaire.
+La **régression linéaire non régularisée reste inutilisable** : R² d'entraînement 0.975 contre 0.845 en validation, et un pire fold à **-1.23**, c'est-à-dire moins bon que prédire simplement la moyenne des ventes. La régularisation n'est pas un raffinement ici, elle est nécessaire.
 
 ---
 
@@ -92,9 +87,9 @@ Le reste des valeurs manquantes est **imputé dans le `Pipeline`**, donc appris 
 
 #### Features temporelles
 
-- `Year` ;
-- `Month` et la semaine ISO en **encodage cyclique** `sin`/`cos` — décembre et janvier sont adjacents dans le temps, pas aux extrémités d'une échelle numérique ;
-- `Day` et `DayOfWeek` **supprimées** après contrôle de variance : `DayOfWeek` est constante (toutes les dates du dataset sont des vendredis).
+Les quatre features demandées par l'énoncé : `Year`, `Month`, `Day`, `DayOfWeek`.
+
+Un **contrôle de variance** accompagne leur création : `DayOfWeek` est **constante** sur ce dataset — toutes les dates sont des vendredis. La colonne est conservée par conformité à l'énoncé, en notant qu'elle ne peut rien apporter. Le Lasso le confirme plus loin en lui attribuant un coefficient nul.
 
 #### Règle des 3-sigma
 
@@ -117,7 +112,7 @@ Pipeline([
 ])
 ```
 
-29 features pour 90 lignes d'entraînement (ratio p/n = 0.32).
+28 features pour 90 lignes d'entraînement (ratio p/n = 0.31).
 
 ### Partie 2 — Régression linéaire (baseline)
 
@@ -161,7 +156,7 @@ La target vaut ~10⁶ $ et la tolérance de la descente par coordonnées est rel
 | 100 000 | 42/50 | 11/50 | 0/50 |
 | **1 000 000** | 11/50 | **0/50** | **0/50** |
 
-D'où `max_iter=1_000_000` et une grille d'`alpha` calée sur l'échelle de la target : `[1, 10, 100, 1000, 10000, 100000]`. Avec `y ~ 10⁶`, un `alpha` inférieur à 1 ne régularise rien du tout.
+D'où `max_iter=1_000_000` et une grille d'`alpha` calée sur l'échelle de la target : `[1, 10, 100, 1000, 10000, 100000]`. Avec `y ~ 10⁶`, un `alpha` inférieur à 1 ne régularise rien du tout. Le `alpha` retenu vaut **10**.
 
 ---
 
@@ -179,7 +174,7 @@ Puis **Kernel → Restart Kernel and Run All Cells**. Le notebook s'exécute de 
 Le code réutilisable est dans `src/walmart.py`, couvert par une suite de tests :
 
 ```bash
-python -m pytest -q          # 35 tests
+python -m pytest -q          # 37 tests
 ```
 
 Ils vérifient notamment les points où une erreur serait silencieuse : la reconstruction de `Holiday_Flag` reproduit bien toutes les valeurs connues, le filtre 3-sigma conserve les `NaN` destinés à l'imputation, l'imputation retombe sur la médiane globale pour un magasin inconnu, aucune feature n'est constante, et une catégorie inconnue reste distincte de la catégorie de référence.
@@ -212,7 +207,7 @@ jedha-walmart-project/
 ├── src/
 │   ├── walmart.py                  # Pipeline et protocole d'évaluation du livrable
 │   └── improvements.py             # Pistes hors périmètre, isolées du livrable
-├── tests/                          # 35 tests (pytest)
+├── tests/                          # 37 tests (pytest)
 ├── requirements.txt                # Versions figées
 ├── .gitattributes                  # Driver de diff pour les .ipynb
 ├── README.md
@@ -225,10 +220,12 @@ L'énoncé du projet est intégré au notebook (cellules markdown d'introduction
 
 `02-Walmart_ameliorations.ipynb` teste quatre pistes qui **s'écartent de l'énoncé** — transformation `log1p` de la target, encodage par cible des magasins, modèles non linéaires, `ElasticNet` — dans le seul but de chiffrer ce que le livrable laisse sur la table. Il utilise le même découpage et le même protocole, donc les chiffres sont directement comparables.
 
-Résultat : **aucune de ces pistes ne bat le modèle du livrable sur le R² moyen.** Deux nuances qui n'apparaissent qu'en regardant au-delà de la moyenne :
+Résultat : **une seule piste bat le livrable, mais elle le bat sur tous les critères.** `log1p(y) + Ridge(0.001)` obtient R² = 0.895 contre 0.865, avec un écart-type plus faible (0.224 contre 0.268), un meilleur pire fold (-0.56 contre -0.78), et gagne **46 folds sur 50** (p = 1.0e-11). Le coût de la conformité stricte à l'énoncé est donc chiffré : **environ 0.03 de R²**.
 
-- `log1p(y) + Ridge(0.001)` gagne sur **41 folds sur 50** (p = 1.2e-05) mais s'effondre sur un seul (R² = -1.52), ce qui suffit à inverser le classement des moyennes ;
-- l'encodage par cible sacrifie 0.06 de R² moyen, mais ne descend jamais sous 0.28 et **divise par trois l'erreur** sur les magasins absents du jeu d'entraînement (660 819 $ → 224 730 $).
+Les six autres pistes perdent sur la moyenne. Deux méritent d'être signalées :
+
+- **cinq pistes sur sept sont plus régulières** que la référence, et aucune ne descend en négatif là où elle tombe à -0.78 ;
+- l'encodage par cible sacrifie 0.05 de R² moyen mais **divise par trois l'erreur** sur les magasins absents du jeu d'entraînement (709 936 $ → 233 575 $).
 
 Rien de ce notebook n'est reporté dans le livrable.
 
@@ -244,7 +241,7 @@ Rien de ce notebook n'est reporté dans le livrable.
 - ✅ Optimisation `GridSearchCV` (bonus)
 - ✅ Comparaison finale des modèles
 - ✅ Pipeline sérialisé, applicable à des données brutes
-- ✅ Code réutilisable isolé dans `src/` et couvert par 35 tests
+- ✅ Code réutilisable isolé dans `src/` et couvert par 37 tests
 
 ---
 

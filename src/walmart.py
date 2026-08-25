@@ -49,9 +49,10 @@ OUTLIER_COLS = ["Temperature", "Fuel_Price", "CPI", "Unemployment"]
 IMPUTE_COLS = list(OUTLIER_COLS)
 
 CATEGORICAL_FEATURES = ["Store", "Holiday_Flag"]
+#: Variables numeriques, exactement celles listees par l'enonce.
 NUMERICAL_FEATURES = [
-    "Temperature", "Fuel_Price", "CPI", "Unemployment", "Year",
-    "Month_sin", "Month_cos", "Week_sin", "Week_cos",
+    "Temperature", "Fuel_Price", "CPI", "Unemployment",
+    "Year", "Month", "Day", "DayOfWeek",
 ]
 
 
@@ -83,20 +84,21 @@ def validate_holiday_reconstruction(df: pd.DataFrame, dates: pd.Series) -> tuple
 
 
 def add_time_features(df: pd.DataFrame, dates: pd.Series) -> pd.DataFrame:
-    """Ajoute Year et l'encodage cyclique du mois et de la semaine ISO.
+    """Cree les quatre features temporelles demandees par l'enonce.
 
-    `Day` et `DayOfWeek` sont volontairement absentes : DayOfWeek est constante
-    sur ce dataset (toutes les dates sont des vendredis) et Day n'a donc aucune
-    interpretation metier.
+    year, month, day et day of week, en numerique.
+
+    Note d'analyse : sur ce dataset, `DayOfWeek` est CONSTANTE — toutes les
+    dates sont des vendredis. La colonne est conservee par conformite a
+    l'enonce, mais elle ne porte aucune information : le StandardScaler la
+    ramene a zero et le Lasso lui attribue un coefficient nul. Le controle est
+    fait explicitement dans le notebook plutot que suppose.
     """
     df = df.copy()
-    month = dates.dt.month
-    week = dates.dt.isocalendar().week.astype(int)
     df["Year"] = dates.dt.year
-    df["Month_sin"] = np.sin(2 * np.pi * month / 12)
-    df["Month_cos"] = np.cos(2 * np.pi * month / 12)
-    df["Week_sin"] = np.sin(2 * np.pi * week / 52)
-    df["Week_cos"] = np.cos(2 * np.pi * week / 52)
+    df["Month"] = dates.dt.month
+    df["Day"] = dates.dt.day
+    df["DayOfWeek"] = dates.dt.dayofweek
     return df
 
 

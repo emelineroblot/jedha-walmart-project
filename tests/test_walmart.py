@@ -85,26 +85,43 @@ def test_clean_conserve_plus_que_dropna_global(raw, clean_df):
     assert len(clean_df) > naif
 
 
-def test_pas_de_colonne_constante_dans_les_features(clean_df):
-    """DayOfWeek etait constante : aucune feature ne doit l'etre."""
-    features = [c for c in clean_df.columns if c != w.TARGET]
-    constantes = [c for c in features if clean_df[c].nunique(dropna=True) <= 1]
-    assert constantes == []
+def test_les_quatre_features_temporelles_de_l_enonce_sont_presentes(clean_df):
+    """L'enonce demande year, month, day et day of week, en numerique."""
+    for col in ["Year", "Month", "Day", "DayOfWeek"]:
+        assert col in clean_df.columns, f"{col} manquante"
+        assert pd.api.types.is_numeric_dtype(clean_df[col])
 
 
-def test_day_et_dayofweek_absentes(clean_df):
-    assert "Day" not in clean_df.columns
-    assert "DayOfWeek" not in clean_df.columns
+def test_les_features_numeriques_correspondent_a_l_enonce():
+    assert w.NUMERICAL_FEATURES == [
+        "Temperature", "Fuel_Price", "CPI", "Unemployment",
+        "Year", "Month", "Day", "DayOfWeek",
+    ]
+    assert w.CATEGORICAL_FEATURES == ["Store", "Holiday_Flag"]
 
 
-def test_encodage_cyclique_borne_et_continu(clean_df):
-    for col in ["Month_sin", "Month_cos", "Week_sin", "Week_cos"]:
-        assert clean_df[col].between(-1, 1).all()
-    # decembre et janvier doivent etre proches, contrairement a un encodage 12 vs 1
-    dec = np.array([np.sin(2 * np.pi * 12 / 12), np.cos(2 * np.pi * 12 / 12)])
-    jan = np.array([np.sin(2 * np.pi * 1 / 12), np.cos(2 * np.pi * 1 / 12)])
-    jui = np.array([np.sin(2 * np.pi * 6 / 12), np.cos(2 * np.pi * 6 / 12)])
-    assert np.linalg.norm(dec - jan) < np.linalg.norm(dec - jui)
+def test_features_temporelles_dans_leurs_bornes_calendaires(clean_df):
+    assert clean_df["Month"].between(1, 12).all()
+    assert clean_df["Day"].between(1, 31).all()
+    assert clean_df["DayOfWeek"].between(0, 6).all()
+
+
+def test_dayofweek_est_constante(clean_df):
+    """Constat documente : toutes les dates du dataset sont des vendredis (code 4).
+
+    La colonne est conservee par conformite a l'enonce, mais ce test fige le
+    constat : si un futur jeu de donnees contenait d'autres jours, il faudrait
+    reconsiderer l'interpretation des coefficients.
+    """
+    assert clean_df["DayOfWeek"].nunique() == 1
+    assert clean_df["DayOfWeek"].iloc[0] == 4
+
+
+def test_une_colonne_constante_ne_porte_aucune_information(clean_df):
+    """Le StandardScaler ramene une colonne constante a zero : elle n'influence rien."""
+    from sklearn.preprocessing import StandardScaler
+    transforme = StandardScaler().fit_transform(clean_df[["DayOfWeek"]])
+    assert np.allclose(transforme, 0.0)
 
 
 # --------------------------------------------------------------------------- #
