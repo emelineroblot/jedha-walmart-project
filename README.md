@@ -22,10 +22,10 @@ Le projet suit les trois parties demandées : **EDA et preprocessing**, **régre
 | **Modèle retenu** | `Ridge(alpha=0.01)` dans un `Pipeline` complet |
 | **Performance** | **R² = 0.873 ± 0.162** (validation croisée, 50 folds) |
 | **RMSE** | 218 155 $ |
-| **Hold-out** (24 lignes, indicatif) | R² = 0.792 · RMSE = 269 238 $ · MAE = 165 317 $ |
+| **Hold-out** (24 lignes, indicatif) | R² = 0.792, IC 95 % **[0.34 ; 0.96]** · RMSE = 269 238 $ |
 
 > ⚠️ **Le chiffre à retenir est le R² de validation croisée, pas celui du hold-out.**
-> Avec un dataset de cette taille, un score mesuré sur un seul découpage n'est pas une mesure de performance : sur ce jeu de données, le R² d'un hold-out varie de **0.17 à 0.98** selon la valeur de `random_state`. C'est pourquoi tous les scores sont reportés en **moyenne ± écart-type** sur 50 folds.
+> Avec un dataset de cette taille, un score mesuré sur un seul découpage n'est pas une mesure de performance. Le bootstrap le rend visible : l'intervalle de confiance à 95 % du R² sur le hold-out s'étend de **0.34 à 0.96**, soit une largeur de 0.62 point. C'est pourquoi tous les scores sont reportés en **moyenne ± écart-type** sur 50 folds.
 
 ### Comparaison des modèles
 
@@ -174,6 +174,16 @@ jupyter lab 01-Walmart_sales.ipynb
 
 Puis **Kernel → Restart Kernel and Run All Cells**. Le notebook s'exécute de bout en bout sans erreur ni avertissement (~2 min).
 
+### Tests
+
+Le code réutilisable est dans `src/walmart.py`, couvert par une suite de tests :
+
+```bash
+python -m pytest -q          # 35 tests
+```
+
+Ils vérifient notamment les points où une erreur serait silencieuse : la reconstruction de `Holiday_Flag` reproduit bien toutes les valeurs connues, le filtre 3-sigma conserve les `NaN` destinés à l'imputation, l'imputation retombe sur la médiane globale pour un magasin inconnu, aucune feature n'est constante, et une catégorie inconnue reste distincte de la catégorie de référence.
+
 Le modèle entraîné est sauvegardé en fin de notebook et s'applique directement à des données brutes :
 
 ```python
@@ -196,15 +206,31 @@ pip install nbdime && nbdime config-git --enable --global
 
 ```
 jedha-walmart-project/
-├── 01-Walmart_sales.ipynb      # Notebook principal (EDA + modélisation)
-├── Walmart_Store_sales.csv     # Dataset
-├── requirements.txt            # Versions figées
-├── .gitattributes              # Driver de diff pour les .ipynb
+├── 01-Walmart_sales.ipynb          # LIVRABLE : EDA + modélisation, conforme à l'énoncé
+├── 02-Walmart_ameliorations.ipynb  # Exploration hors périmètre (voir ci-dessous)
+├── Walmart_Store_sales.csv         # Dataset
+├── src/
+│   ├── walmart.py                  # Pipeline et protocole d'évaluation du livrable
+│   └── improvements.py             # Pistes hors périmètre, isolées du livrable
+├── tests/                          # 35 tests (pytest)
+├── requirements.txt                # Versions figées
+├── .gitattributes                  # Driver de diff pour les .ipynb
 ├── README.md
-└── models/                     # Pipeline sérialisé (non versionné, régénéré à l'exécution)
+└── models/                         # Pipeline sérialisé (non versionné, régénéré à l'exécution)
 ```
 
 L'énoncé du projet est intégré au notebook (cellules markdown d'introduction).
+
+### Notebook d'exploration (hors périmètre)
+
+`02-Walmart_ameliorations.ipynb` teste quatre pistes qui **s'écartent de l'énoncé** — transformation `log1p` de la target, encodage par cible des magasins, modèles non linéaires, `ElasticNet` — dans le seul but de chiffrer ce que le livrable laisse sur la table. Il utilise le même découpage et le même protocole, donc les chiffres sont directement comparables.
+
+Résultat : **aucune de ces pistes ne bat le modèle du livrable sur le R² moyen.** Deux nuances qui n'apparaissent qu'en regardant au-delà de la moyenne :
+
+- `log1p(y) + Ridge(0.001)` gagne sur **41 folds sur 50** (p = 1.2e-05) mais s'effondre sur un seul (R² = -1.52), ce qui suffit à inverser le classement des moyennes ;
+- l'encodage par cible sacrifie 0.06 de R² moyen, mais ne descend jamais sous 0.28 et **divise par trois l'erreur** sur les magasins absents du jeu d'entraînement (660 819 $ → 224 730 $).
+
+Rien de ce notebook n'est reporté dans le livrable.
 
 ---
 
@@ -218,6 +244,7 @@ L'énoncé du projet est intégré au notebook (cellules markdown d'introduction
 - ✅ Optimisation `GridSearchCV` (bonus)
 - ✅ Comparaison finale des modèles
 - ✅ Pipeline sérialisé, applicable à des données brutes
+- ✅ Code réutilisable isolé dans `src/` et couvert par 35 tests
 
 ---
 

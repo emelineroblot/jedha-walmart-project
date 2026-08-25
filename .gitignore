@@ -5,3 +5,8 @@ docs/
 
 # Artefact regenere a chaque execution du notebook (evite les diffs binaires)
 models/
+
+# Caches Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
